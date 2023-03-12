@@ -5,7 +5,7 @@ the OpenSSL C API with modern C++.
 
 This mainly shows using the OpenSSL 
 primitives as smart pointers (no 
-XXX_free neeed).
+XXX_free needed).
 
 ## Included examples
 
