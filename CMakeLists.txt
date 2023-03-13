@@ -4,7 +4,7 @@ project(cert_test)
 set(CMAKE_CXX_STANDARD 17)
 
 
-add_executable(cert_test main.cpp)
+add_executable(cert_test main.cpp OpenSSL.cpp OpenSSL.h)
 
 find_package(OpenSSL REQUIRED)
 if(OPENSSL_FOUND)
