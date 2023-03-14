@@ -16,16 +16,25 @@ int OpenSSL::verify_cert_signed_by_issuer(const std::string& cert_pem, const std
         return -1;
 
     BIO_MEM_uptr bio_issuer(BIO_new(BIO_s_mem()), ::BIO_free);
-    BIO_puts(bio_issuer.get(), issuer_pem.c_str());
+    if(BIO_puts(bio_issuer.get(), issuer_pem.c_str()) <= 0)
+        return -1;
+
     X509_uptr issuer(PEM_read_bio_X509(bio_issuer.get(), nullptr,
                                        nullptr, nullptr), ::X509_free);
+    if(issuer == nullptr)
+        return -1;
 
     EVP_PKEY_uptr signing_key(X509_get_pubkey(issuer.get()), ::EVP_PKEY_free);
 
     BIO_MEM_uptr bio_cert(BIO_new(BIO_s_mem()), ::BIO_free);
-    BIO_puts(bio_cert.get(), cert_pem.c_str());
+    if(BIO_puts(bio_cert.get(), cert_pem.c_str()) <= 0)
+        return -1;
+    
     X509_uptr cert(PEM_read_bio_X509(bio_cert.get(), nullptr,
                                      nullptr, nullptr), ::X509_free);
+
+    if(cert == nullptr)
+        return -1;
 
     int result = X509_verify(cert.get(), signing_key.get());
 

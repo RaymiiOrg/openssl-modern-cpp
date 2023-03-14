@@ -161,6 +161,30 @@ TEST_F(OpenSSLTestSuite, nonExistingClientResultsInError) {
     EXPECT_EQ(result, -1);
 }
 
+TEST_F(OpenSSLTestSuite, garbageFileResultsInError) {
+    //arrange
+    auto client_pem = readFile(dataPath / "gibberish.pem");
+    auto issuer_pem = readFile(dataPath / "issuer.pem");
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_issuer(client_pem, issuer_pem);
+
+    //assert
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(OpenSSLTestSuite, garbageIssuerFileResultsInError) {
+    //arrange
+    auto client_pem = readFile(dataPath / "cert.pem");
+    auto issuer_pem = readFile(dataPath / "garbage.pem");
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_issuer(client_pem, issuer_pem);
+
+    //assert
+    EXPECT_EQ(result, -1);
+}
+
 TEST_F(OpenSSLTestSuite, nonExistingIssuerResultsInError) {
     //arrange
     auto client_pem = readFile(dataPath / "issuer.pem");
