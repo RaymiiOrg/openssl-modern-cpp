@@ -25,6 +25,106 @@ struct OpenSSLTestSuite : public ::testing::Test
 
 };
 
+
+TEST_F(OpenSSLTestSuite, certSubjectMatches) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "cert.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    std::string result = OpenSSL::x509_subject(cert_x509.get());
+
+    //assert
+    EXPECT_EQ(result, "CN=raymii.org");
+}
+
+
+TEST_F(OpenSSLTestSuite, certSubjectEmptyOnNonExistingFile) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "notexist.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    std::string result = OpenSSL::x509_subject(cert_x509.get());
+
+    //assert
+    EXPECT_EQ(result, "");
+}
+
+TEST_F(OpenSSLTestSuite, certSubjectEmptyOnGarbageFile) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "gibberish.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    std::string result = OpenSSL::x509_subject(cert_x509.get());
+
+    //assert
+    EXPECT_EQ(result, "");
+}
+
+TEST_F(OpenSSLTestSuite, pointerEmptyOnNotExistingFile) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "notexist.pem");
+    X509_uptr empty{nullptr, ::X509_free};
+
+    //act
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //assert
+    EXPECT_EQ(cert_x509, empty);
+}
+
+TEST_F(OpenSSLTestSuite, pointerEmptyOnGarbageFile) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "gibberish.pem");
+    X509_uptr empty{nullptr, ::X509_free};
+
+    //act
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //assert
+    EXPECT_EQ(cert_x509, empty);
+}
+
+TEST_F(OpenSSLTestSuite, certIssuerMatches) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "cert.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    std::string result = OpenSSL::x509_issuer(cert_x509.get());
+
+    //assert
+    EXPECT_EQ(result, "C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA");
+}
+
+
+TEST_F(OpenSSLTestSuite, certIssuerEmptyOnNonExistingFile) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "notexist.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    std::string result = OpenSSL::x509_issuer(cert_x509.get());
+
+    //assert
+    EXPECT_EQ(result, "");
+}
+
+TEST_F(OpenSSLTestSuite, certIssuerEmptyOnGarbageFile) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "gibberish.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    std::string result = OpenSSL::x509_issuer(cert_x509.get());
+
+    //assert
+    EXPECT_EQ(result, "");
+}
+
+
 TEST_F(OpenSSLTestSuite, certSignedByIssuer) {
     //arrange
     auto cert_pem = readFile(dataPath / "cert.pem");

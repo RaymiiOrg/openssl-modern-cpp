@@ -34,6 +34,10 @@ int OpenSSL::verify_cert_signed_by_issuer(const std::string& cert_pem, const std
 
 X509_uptr OpenSSL::cert_to_x509(const std::string& cert_pem)
 {
+
+    if(cert_pem.empty())
+        return X509_uptr{nullptr, ::X509_free};
+
     X509_uptr x509(X509_new(), ::X509_free);
     BIO_MEM_uptr bio(BIO_new(BIO_s_mem()), ::BIO_free);
     BIO_puts(bio.get(), cert_pem.c_str());
@@ -47,6 +51,9 @@ X509_uptr OpenSSL::cert_to_x509(const std::string& cert_pem)
 std::string OpenSSL::x509_subject (const X509* const x509)
 {
     std::string result;
+    if(x509 == nullptr)
+        return result;
+
     char subject_buffer[maxKeySize] = {0};
     BIO_MEM_uptr bio(BIO_new(BIO_s_mem()), BIO_free);
 
@@ -64,6 +71,9 @@ std::string OpenSSL::x509_subject (const X509* const x509)
 std::string OpenSSL::x509_issuer (const X509* const x509)
 {
     std::string result;
+    if(x509 == nullptr)
+        return result;
+
     char issuer_buffer[maxKeySize] = {0};
     BIO_MEM_uptr bio(BIO_new(BIO_s_mem()), BIO_free);
 
