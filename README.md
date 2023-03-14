@@ -7,6 +7,11 @@ This mainly shows using the OpenSSL
 primitives as smart pointers (no 
 XXX_free needed).
 
+
+Note that cloning this repository does not automatically include the nested git projects.
+They can be included by adding the `--recurse-submodules` when cloning.
+
+
 ## Included examples
 
 The code shows how to validate
