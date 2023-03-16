@@ -39,10 +39,10 @@ int main(int argc, char **argv)
 {
 
     // runs in build/src folder, certs are in tst folder
-    std::string cert_pem_filename = "../../tst/data/cert.pem";
-    std::string issuer_pem_filename = "../../tst/data/issuer.pem";
-    std::string root_pem_filename = "../../tst/data/trusted-root.pem";
-    std::string fake_root_pem_filename = "../../tst/data/fake-root-with-same-name.pem";
+    std::string cert_pem_filename = "../../tst/data/raymii.org.2023.pem";
+    std::string issuer_pem_filename = "../../tst/data/Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem";
+    std::string root_pem_filename = "../../tst/data/USERTrust_RSA_Certification_Authority.pem";
+    std::string fake_root_pem_filename = "../../tst/data/FAKE_USERTrust_RSA_Certification_Authority.pem";
 
 
     if(!std::filesystem::exists(cert_pem_filename) ||

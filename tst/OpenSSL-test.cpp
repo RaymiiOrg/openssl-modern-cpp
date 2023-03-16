@@ -4,15 +4,13 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-
 struct OpenSSLTestSuite : public ::testing::Test
 {
-
     fs::path dataPath = fs::path(__FILE__).parent_path() / "data/";
     OpenSSLTestSuite() = default;
     ~OpenSSLTestSuite() override = default;
 
-   std::string readFile(const fs::path& filename) {
+   static std::string readFile(const fs::path& filename) {
        if(!fs::exists(filename))
            return "";
 
@@ -22,13 +20,17 @@ struct OpenSSLTestSuite : public ::testing::Test
        return out;
    }
 
+};
+
+struct CustomVerifyCallBacksTestSuite : public OpenSSLTestSuite
+{
 
 };
 
 
 TEST_F(OpenSSLTestSuite, certSubjectMatches) {
     //arrange
-    auto cert_pem = readFile(dataPath / "cert.pem");
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
     auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
 
     //act
@@ -89,7 +91,7 @@ TEST_F(OpenSSLTestSuite, pointerEmptyOnGarbageFile) {
 
 TEST_F(OpenSSLTestSuite, certIssuerMatches) {
     //arrange
-    auto cert_pem = readFile(dataPath / "cert.pem");
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
     auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
 
     //act
@@ -127,8 +129,8 @@ TEST_F(OpenSSLTestSuite, certIssuerEmptyOnGarbageFile) {
 
 TEST_F(OpenSSLTestSuite, certSignedByIssuer) {
     //arrange
-    auto cert_pem = readFile(dataPath / "cert.pem");
-    auto issuer_pem = readFile(dataPath / "issuer.pem");
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto issuer_pem = readFile(dataPath / "Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem");
 
     //act
     int result = OpenSSL::verify_cert_signed_by_issuer(cert_pem, issuer_pem);
@@ -139,8 +141,8 @@ TEST_F(OpenSSLTestSuite, certSignedByIssuer) {
 
 TEST_F(OpenSSLTestSuite, issuerSignedByRoot) {
     //arrange
-    auto issuer_pem = readFile(dataPath / "issuer.pem");
-    auto root_pem = readFile(dataPath / "trusted-root.pem");
+    auto issuer_pem = readFile(dataPath / "Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem");
+    auto root_pem = readFile(dataPath / "USERTrust_RSA_Certification_Authority.pem");
 
     //act
     int result = OpenSSL::verify_cert_signed_by_issuer(issuer_pem, root_pem);
@@ -152,7 +154,7 @@ TEST_F(OpenSSLTestSuite, issuerSignedByRoot) {
 TEST_F(OpenSSLTestSuite, nonExistingClientResultsInError) {
     //arrange
     auto client_pem = readFile(dataPath / "notexist.pem");
-    auto issuer_pem = readFile(dataPath / "issuer.pem");
+    auto issuer_pem = readFile(dataPath / "Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem");
 
     //act
     int result = OpenSSL::verify_cert_signed_by_issuer(client_pem, issuer_pem);
@@ -164,7 +166,7 @@ TEST_F(OpenSSLTestSuite, nonExistingClientResultsInError) {
 TEST_F(OpenSSLTestSuite, garbageFileResultsInError) {
     //arrange
     auto client_pem = readFile(dataPath / "gibberish.pem");
-    auto issuer_pem = readFile(dataPath / "issuer.pem");
+    auto issuer_pem = readFile(dataPath / "Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem");
 
     //act
     int result = OpenSSL::verify_cert_signed_by_issuer(client_pem, issuer_pem);
@@ -175,7 +177,7 @@ TEST_F(OpenSSLTestSuite, garbageFileResultsInError) {
 
 TEST_F(OpenSSLTestSuite, garbageIssuerFileResultsInError) {
     //arrange
-    auto client_pem = readFile(dataPath / "cert.pem");
+    auto client_pem = readFile(dataPath / "raymii.org.2023.pem");
     auto issuer_pem = readFile(dataPath / "garbage.pem");
 
     //act
@@ -187,7 +189,7 @@ TEST_F(OpenSSLTestSuite, garbageIssuerFileResultsInError) {
 
 TEST_F(OpenSSLTestSuite, nonExistingIssuerResultsInError) {
     //arrange
-    auto client_pem = readFile(dataPath / "issuer.pem");
+    auto client_pem = readFile(dataPath / "Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem");
     auto issuer_pem = readFile(dataPath / "notexist.pem");
 
     //act
@@ -200,8 +202,8 @@ TEST_F(OpenSSLTestSuite, nonExistingIssuerResultsInError) {
 
 TEST_F(OpenSSLTestSuite, issuerNotSignedByFakeRootWithSameSubject) {
     //arrange
-    auto issuer_pem = readFile(dataPath / "issuer.pem");
-    auto root_pem = readFile(dataPath / "fake-root-with-same-name.pem");
+    auto issuer_pem = readFile(dataPath / "Sectigo_RSA_Domain_Validation_Secure_Server_CA.pem");
+    auto root_pem = readFile(dataPath / "FAKE_USERTrust_RSA_Certification_Authority.pem");
 
     //act
     int result = OpenSSL::verify_cert_signed_by_issuer(issuer_pem, root_pem);
@@ -213,8 +215,8 @@ TEST_F(OpenSSLTestSuite, issuerNotSignedByFakeRootWithSameSubject) {
 
 TEST_F(OpenSSLTestSuite, clientNotSignedByRoot) {
     //arrange
-    auto cert_pem = readFile(dataPath / "cert.pem");
-    auto root_pem = readFile(dataPath / "trusted-root.pem");
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto root_pem = readFile(dataPath / "USERTrust_RSA_Certification_Authority.pem");
 
     //act
     int result = OpenSSL::verify_cert_signed_by_issuer(cert_pem, root_pem);
@@ -222,3 +224,205 @@ TEST_F(OpenSSLTestSuite, clientNotSignedByRoot) {
     //assert
     EXPECT_EQ(result, 0);
 }
+
+TEST_F(OpenSSLTestSuite, certSignedByChain) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto chain_pem = readFile(dataPath / "Chain-Sectigo_UserTRUST_RSA.pem");
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 1);
+}
+
+TEST_F(OpenSSLTestSuite, certChainHasMultipleSubjects) {
+    //arrange
+    auto chain_pem = readFile(dataPath / "Chain-Sectigo_UserTRUST_RSA.pem");
+    auto chain = OpenSSL::certs_to_x509(chain_pem);
+
+    //act & assert
+    ASSERT_EQ(chain.size(), 2u);
+    EXPECT_EQ(OpenSSL::x509_subject(chain[0].get()), "C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA");
+    EXPECT_EQ(OpenSSL::x509_subject(chain[1].get()), "C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority");
+}
+
+TEST_F(OpenSSLTestSuite, invalidIntermidiateInChainFails) {
+    //arrange
+    auto chain_pem = readFile(dataPath / "chain-with-gibberish-intermidiate.pem");
+    auto chain = OpenSSL::certs_to_x509(chain_pem);
+
+    //act & assert
+    ASSERT_EQ(chain.size(), 0u);
+}
+
+
+TEST_F(OpenSSLTestSuite, invalidRootInChainSkipsInvalidCertificate) {
+    //arrange
+    auto chain_pem = readFile(dataPath / "chain-with-gibberish-root.pem");
+    auto chain = OpenSSL::certs_to_x509(chain_pem);
+
+    //act & assert
+    ASSERT_EQ(chain.size(), 1u);
+    EXPECT_EQ(OpenSSL::x509_subject(chain[0].get()), "C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA");
+}
+
+
+TEST_F(OpenSSLTestSuite, certNotSignedByWrongChain) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto chain_pem = readFile(dataPath / "Chain-Staat_der_Nederlanden_Organisatie.pem");
+    testing::internal::CaptureStderr();
+
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "\nunable to get local issuer certificate\n");
+}
+
+TEST_F(OpenSSLTestSuite, certNotSignedByEmptyChain) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto chain_pem = "";
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
+
+    //assert
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(OpenSSLTestSuite, certNotSignedByChainWithGibberishIntermidiate) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto chain_pem = readFile(dataPath / "chain-with-gibberish-intermidiate.pem");
+    testing::internal::CaptureStderr();
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "\nunable to get local issuer certificate\n");
+}
+
+TEST_F(OpenSSLTestSuite, certSignedCheckIgnoresGibberishRootWhenSignedByChainWithGibberishRoot) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto chain_pem = readFile(dataPath / "chain-with-gibberish-root.pem");
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 1);
+}
+
+TEST_F(OpenSSLTestSuite, otherCertSignedOtherChain) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "Digidentity_BV_PKIoverheid_Organisatie_Persoon_CA_G3.pem");
+    auto chain_pem = readFile(dataPath / "Chain-Staat_der_Nederlanden_Organisatie.pem");
+    testing::internal::CaptureStderr();
+
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 1);
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
+}
+
+
+TEST_F(CustomVerifyCallBacksTestSuite, expiredCertValidDueToParams) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "expired-rsa-dv-ssl-com.pem");
+    auto chain_pem = readFile(dataPath / "expired-rsa-dv-ssl-com-chain.pem");
+
+    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new(), ::X509_VERIFY_PARAM_free);
+    X509_VERIFY_PARAM_set_flags(param.get(), X509_V_FLAG_NO_CHECK_TIME);
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem,
+                                                      chain_pem,
+                                                      param.get());
+
+    //assert
+    EXPECT_EQ(result, 1);
+};
+
+TEST_F(CustomVerifyCallBacksTestSuite, expiredBadSSLCertInvalid) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "expired.baddssl.com.cert.pem");
+    auto chain_pem = readFile(dataPath / "expired.baddssl.com.chain.pem");
+    testing::internal::CaptureStderr();
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem,
+                                                      chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "\ncertificate has expired\n");
+}
+
+TEST_F(CustomVerifyCallBacksTestSuite, expiredBadSSLWithExpiredChainCertValidDueToParams) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "expired.baddssl.com.cert.pem");
+    auto chain_pem = readFile(dataPath / "expired.baddssl.com.chain.pem");
+
+    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new(), ::X509_VERIFY_PARAM_free);
+    X509_VERIFY_PARAM_set_flags(param.get(), X509_V_FLAG_NO_CHECK_TIME);
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem,
+                                                      chain_pem,
+                                                      param.get());
+
+    //assert
+    EXPECT_EQ(result, 1);
+}
+
+TEST_F(CustomVerifyCallBacksTestSuite, expiredCertInvalid) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "expired-rsa-dv-ssl-com.pem");
+    auto chain_pem = readFile(dataPath / "expired-rsa-dv-ssl-com-chain.pem");
+    testing::internal::CaptureStderr();
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem,
+                                                      chain_pem);
+
+    //assert
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "\ncertificate has expired\n");
+}
+
+TEST_F(CustomVerifyCallBacksTestSuite, expiredCertValidDueToCustomVerifyCallback) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "expired-rsa-dv-ssl-com.pem");
+    auto chain_pem = readFile(dataPath / "expired-rsa-dv-ssl-com-chain.pem");
+    testing::internal::CaptureStderr();
+
+    auto verify_callback_accept_exipred = [](int ok, X509_STORE_CTX *ctx) -> int {
+        /* Tolerate certificate expiration */
+        if (X509_STORE_CTX_get_error(ctx) == X509_V_ERR_CERT_HAS_EXPIRED)
+            return 1;
+        /* Otherwise don't override */
+        return ok;
+    };
+
+
+    //act
+    int result = OpenSSL::verify_cert_signed_by_chain(cert_pem,
+                                                      chain_pem,
+                                                      verify_callback_accept_exipred);
+
+    //assert
+    EXPECT_EQ(result, 1);
+    EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
+};
