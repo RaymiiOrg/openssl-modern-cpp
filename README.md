@@ -5,11 +5,19 @@ the OpenSSL C API with modern C++.
 
 This mainly shows using the OpenSSL 
 primitives as smart pointers (no 
-XXX_free needed).
+XXX_free needed) and has a bunch of 
+unit tests demonstrating different
+validation methods as well as a few 
+example data gathering methods (for example
+to get a certificate subject as a `std::string`).
+
+It also shows how to link against OpenSSL
+using CMake and `CMakeLists.txt`.
 
 Note that cloning this repository does not automatically include the nested git projects.
 They can be included by adding the `--recurse-submodules` when cloning.
 
+[Read more over here](https://raymii.org).
 
 ## Included examples
 
