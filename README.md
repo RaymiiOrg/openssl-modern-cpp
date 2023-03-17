@@ -7,6 +7,10 @@ This mainly shows using the OpenSSL
 primitives as smart pointers (no 
 XXX_free needed).
 
+Note that cloning this repository does not automatically include the nested git projects.
+They can be included by adding the `--recurse-submodules` when cloning.
+
+
 ## Included examples
 
 The code shows how to validate
@@ -29,6 +33,33 @@ The code also shows how to print the
 certificate. It includes an intermediate
 method to convert a PEM file to an 
 `X509` object.
+
+The unit test further show how to use the code.
+
+## Example unit tests
+
+The `tst` folder has a bunch of unit tests checking
+valid, invalid and other scenario's, like expired 
+certifcates or custom `(*verify_cb)(int, X509_STORE_CTX *)`
+lambda's that are passed as function pointers 
+(because they don't capture anything). 
+
+### Expired certificate validation
+
+To validate an expired certificate, you can either
+pass the `X509_V_FLAG_NO_CHECK_TIME` as 
+`X509_VERIFY_PARAM*` (also provided as `unique_ptr`),
+or provide a custom callback lambda mimicking a 
+`int (*verify_cb)(int, X509_STORE_CTX *)`:
+
+    auto verify_callback_accept_exipred = [](int ok, X509_STORE_CTX *ctx) -> int {
+        /* Tolerate certificate expiration */
+        if (X509_STORE_CTX_get_error(ctx) == X509_V_ERR_CERT_HAS_EXPIRED)
+        return 1;
+        /* Otherwise don't override */
+        return ok;
+    };
+
 
 ## Usage
 
@@ -58,9 +89,6 @@ Example output:
     Certificate signed by root (should be INVALID): Signature INVALID
     Issuer signed by FAKE root (should be INVALID): Signature INVALID
 
-
-If you want to verify an entire certificate chain, you must 
-split the individual certificates yourself.
 
 
 ## License
