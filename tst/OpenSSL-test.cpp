@@ -27,7 +27,6 @@ struct CustomVerifyCallBacksTestSuite : public OpenSSLTestSuite
 
 };
 
-
 TEST_F(OpenSSLTestSuite, certSubjectMatches) {
     //arrange
     auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
@@ -68,7 +67,7 @@ TEST_F(OpenSSLTestSuite, certSubjectEmptyOnGarbageFile) {
 TEST_F(OpenSSLTestSuite, pointerEmptyOnNotExistingFile) {
     //arrange
     auto cert_pem = readFile(dataPath / "notexist.pem");
-    X509_uptr empty{nullptr, ::X509_free};
+    X509_uptr empty{nullptr};
 
     //act
     auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
@@ -80,7 +79,7 @@ TEST_F(OpenSSLTestSuite, pointerEmptyOnNotExistingFile) {
 TEST_F(OpenSSLTestSuite, pointerEmptyOnGarbageFile) {
     //arrange
     auto cert_pem = readFile(dataPath / "gibberish.pem");
-    X509_uptr empty{nullptr, ::X509_free};
+    X509_uptr empty{nullptr};
 
     //act
     auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
@@ -343,7 +342,7 @@ TEST_F(CustomVerifyCallBacksTestSuite, expiredCertValidDueToParams) {
     auto cert_pem = readFile(dataPath / "expired-rsa-dv-ssl-com.pem");
     auto chain_pem = readFile(dataPath / "expired-rsa-dv-ssl-com-chain.pem");
 
-    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new(), ::X509_VERIFY_PARAM_free);
+    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new());
     X509_VERIFY_PARAM_set_flags(param.get(), X509_V_FLAG_NO_CHECK_TIME);
 
     //act
@@ -375,7 +374,7 @@ TEST_F(CustomVerifyCallBacksTestSuite, expiredBadSSLWithExpiredChainCertValidDue
     auto cert_pem = readFile(dataPath / "expired.baddssl.com.cert.pem");
     auto chain_pem = readFile(dataPath / "expired.baddssl.com.chain.pem");
 
-    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new(), ::X509_VERIFY_PARAM_free);
+    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new());
     X509_VERIFY_PARAM_set_flags(param.get(), X509_V_FLAG_NO_CHECK_TIME);
 
     //act
@@ -408,7 +407,7 @@ TEST_F(CustomVerifyCallBacksTestSuite, expiredCertValidDueToCustomVerifyCallback
     auto chain_pem = readFile(dataPath / "expired-rsa-dv-ssl-com-chain.pem");
     testing::internal::CaptureStderr();
 
-    auto verify_callback_accept_exipred = [](int ok, X509_STORE_CTX *ctx) -> int {
+    auto verify_callback_accept_exipred = [](int ok, X509_STORE_CTX *ctx) {
         /* Tolerate certificate expiration */
         if (X509_STORE_CTX_get_error(ctx) == X509_V_ERR_CERT_HAS_EXPIRED)
             return 1;
@@ -426,3 +425,34 @@ TEST_F(CustomVerifyCallBacksTestSuite, expiredCertValidDueToCustomVerifyCallback
     EXPECT_EQ(result, 1);
     EXPECT_EQ(testing::internal::GetCapturedStderr(), "");
 };
+
+TEST_F(OpenSSLTestSuite, certSANMatches) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    auto result = OpenSSL::x509_subject_alternative_dns_names(cert_x509.get());
+
+    //assert
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0], "raymii.org");
+    EXPECT_EQ(result[1], "www.raymii.org");
+}
+
+TEST_F(OpenSSLTestSuite, FourSansMatches) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "example.org.crt");
+    auto cert_x509 = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    auto result = OpenSSL::x509_subject_alternative_dns_names(cert_x509.get());
+
+    //assert
+    ASSERT_EQ(result.size(), 5);
+    EXPECT_EQ(result[0], "example.org");
+    EXPECT_EQ(result[1], "www.example.org");
+    EXPECT_EQ(result[2], "ex.example.org");
+    EXPECT_EQ(result[3], "www.ex.example.org");
+}
+
