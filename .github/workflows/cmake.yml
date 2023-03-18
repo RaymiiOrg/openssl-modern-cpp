@@ -18,16 +18,39 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Install sonar-scanner and build-wrapper
+      uses: SonarSource/sonarcloud-github-c-cpp@v1
+
+    - name: Install gcovr
+      run: pip install gcovr
+
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}xd
 
-    - name: Run
+    - name: ls
+      run: ls -laRSh
+
+    - name: ls build
+      run: ls -laRSh ${{github.workspace}}/build
+
+    - name: Run tests
       working-directory: ${{github.workspace}}/build/tst
       run: ctest -C ${{env.BUILD_TYPE}}
+
+    - name: Collect coverage into one XML report
+      run: |
+        gcovr --sonarqube > coverage.xml
+
+    - name: Run sonar-scanner
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        sonar-scanner
 

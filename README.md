@@ -34,7 +34,10 @@ OpenSSL `x509_verify` method.
 The code shows how to use the OpenSSL
 primitives as `unique_ptr`. When those
 go out of scope, no manual `delete` or
-`free` is needed.
+`free` is needed. This is important because
+in between the `new` and the `free`, you
+might get an exception which leaves a 
+memory leak.
 
 The code also shows how to print the 
 `issuer` and `subject` field of a 
