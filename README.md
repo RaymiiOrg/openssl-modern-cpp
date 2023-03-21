@@ -36,7 +36,8 @@ They can be included by adding the `--recurse-submodules` when cloning.
 [SonarCloud runs static analysis on the code, scans coverage and 
 checks for vulnerabilities](https://sonarcloud.io/project/overview?id=RaymiiOrg_openssl-modern-cpp). 
 
-Valgrind shows no issues when running the tests.
+Valgrind shows no issues when running the tests. You might even say
+this repo is memory-safe.
 
 
 ## Example unit tests
