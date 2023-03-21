@@ -152,8 +152,7 @@ public:
      */
     static std::string x509_subject (const X509* x509);
 
-
-    /*
+    /**
      * Parses the X509* and returns the subjectAlternativeNames
      * @param x509 OpenSSL X509 struct filled with certificate
      * @return vector of strings filled with subjectAlternativeName
@@ -162,14 +161,8 @@ public:
     static std::vector<std::string> x509_subject_alternative_dns_names(const X509* x509);
 
     /**
-    * Parses the X509* and returns the subjectAlternativeNames
-    * @param x509 OpenSSL X509 struct filled with certificate
-    * @return vector of strings filled with subjectAlternativeName
-    * NOTE: only parses IP:. Not DNS: or others.
-    */
-    static std::vector<std::string> x509_subject_alternative_ip_names(const X509* x509);
-
-
+     * @param cert_pem PEM encoded certificates
+     */
     [[nodiscard]] static std::vector<X509_uptr> certs_to_x509(const std::string& certs_pem);
 
 

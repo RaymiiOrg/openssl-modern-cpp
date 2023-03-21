@@ -138,6 +138,22 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
 }
 
 
+std::vector<std::string> OpenSSL::x509_subject_alternative_dns_names(const X509 *x509) {
+    std::vector<std::string> result;
+    STACK_OF_GENERAL_NAME_uptr names((STACK_OF(GENERAL_NAME)*)X509_get_ext_d2i(x509,
+                                        NID_subject_alt_name, nullptr, nullptr));
+    int count = sk_GENERAL_NAME_num(names.get());
+    for (int i = 0; i < count; ++i)
+    {
+        GENERAL_NAME_uptr entry(GENERAL_NAME_dup(sk_GENERAL_NAME_value(names.get(), i)));
+        if (!entry) continue;
+
+        result.emplace_back(reinterpret_cast<char const*>(ASN1_STRING_get0_data(entry->d.dNSName)),
+                    ASN1_STRING_length(entry->d.dNSName));
+    }
+
+    return result;
+}
 
 STACK_OF_X509_uptr OpenSSL::certs_to_stack_of_x509(const std::string &certs_pem)
 {
