@@ -3,7 +3,7 @@
 This repository shows how to use
 the OpenSSL C API with modern C++.
 
-This mainly shows using the OpenSSL 
+This mainly shows using the OpenSSL C API
 primitives as smart pointers (no 
 XXX_free needed) and has a bunch of 
 unit tests demonstrating different
@@ -14,10 +14,39 @@ to get a certificate subject as a `std::string`).
 It also shows how to link against OpenSSL
 using CMake and `CMakeLists.txt`.
 
+The OpenSSL C API is horrible for (spoiled) modern 
+C++ developers. Manual free's all over the place,
+every `_sk_TYPE` has its own `_new` and `_free`,
+internal pointers here and there, and most important,
+the documentation sucks. It's extensive, but not useful.
+For example, every C method call is described, but not the
+overall picture. Every individual method is descrived, the command
+line tools are as well, but not something like,
+"Here's how to do X with the C API", where X
+could be anything from validating a certificate
+against the system-provided chain, a self signed chain,
+or checking the purpose, extensions, signing a message, 
+generating a keypair, or whatever.
+
 Note that cloning this repository does not automatically include the nested git projects.
 They can be included by adding the `--recurse-submodules` when cloning.
 
 [Read more over here](https://raymii.org).
+
+[SonarCloud runs static analysis on the code, scans coverage and 
+checks for vulnerabilities](https://sonarcloud.io/project/overview?id=RaymiiOrg_openssl-modern-cpp). 
+
+Valgrind shows no issues when running the tests.
+
+
+## Example unit tests
+
+The `tst` folder has a boatload of unit tests checking
+valid, invalid and other scenario's, like expired 
+certifcates or custom `(*verify_cb)(int, X509_STORE_CTX *)`
+lambda's that are passed as function pointers 
+(because they don't capture anything). 
+
 
 ## Included examples
 
@@ -47,13 +76,6 @@ method to convert a PEM file to an
 
 The unit test further show how to use the code.
 
-## Example unit tests
-
-The `tst` folder has a bunch of unit tests checking
-valid, invalid and other scenario's, like expired 
-certifcates or custom `(*verify_cb)(int, X509_STORE_CTX *)`
-lambda's that are passed as function pointers 
-(because they don't capture anything). 
 
 ### Expired certificate validation
 
