@@ -101,4 +101,6 @@ int main(int argc, char **argv)
     std::cout << "Issuer signed by FAKE root (should be INVALID): ";
     printSignatureValidationResult(badSignature2);
 
+
+    std::cout << "Take a look at the unit tests for more usage examples!";
 }

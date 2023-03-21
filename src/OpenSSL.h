@@ -80,50 +80,32 @@ public:
 
 
     /**
-     * Uses OpenSSL X509_STORE_CTX to verify a certificate against a chain
-     * @param cert_pem single PEM encoded certificate to check against chain
-     * @param chain PEM encoded chain (list of certificates)
-     * @return 1 if OK, 0 if NOT OK, -1 on error
+     * Convenience wrappers
      */
     [[nodiscard]] static int verify_cert_signed_by_chain(const std::string& cert_pem,
                                                          const std::string& issuer_pem);
 
-    /**
-     * Uses OpenSSL X509_STORE_CTX to verify a certificate against a chain
-     * @param cert_pem single PEM encoded certificate to check against chain
-     * @param chain PEM encoded chain (list of certificates)
-     * @param verify_cb optional X509_STORE_CTX_verify_cb function
-     * @return 1 if OK, 0 if NOT OK, -1 on error
-     */
     [[nodiscard]] static int verify_cert_signed_by_chain(const std::string& cert_pem,
                                                          const std::string& issuer_pem,
                                                          int (*verify_cb)(int, X509_STORE_CTX *));
 
-
-    /**
-     * Uses OpenSSL X509_STORE_CTX to verify a certificate against a chain
-     * @param cert_pem single PEM encoded certificate to check against chain
-     * @param chain PEM encoded chain (list of certificates)
-     * @param x509_verify_param optional X509_VERIFY_PARAM to for example disable time checks, X509_V_FLAG_NO_CHECK_TIME
-     * @return 1 if OK, 0 if NOT OK, -1 on error
-     */
     [[nodiscard]] static int verify_cert_signed_by_chain(const std::string& cert_pem,
                                                          const std::string& issuer_pem,
                                                          const X509_VERIFY_PARAM* x509_verify_param);
 
     /**
-     * Uses OpenSSL X509_STORE_CTX to verify a certificate against a chain
+     * Verifies if a certificate is signed by a chain.
      * @param cert_pem single PEM encoded certificate to check against chain
      * @param chain PEM encoded chain (list of certificates)
+     * IMPORTANT: chain must be complete, ordered and ending in a self signed trusted root.
      * @param x509_verify_param optional X509_VERIFY_PARAM to for example disable time checks, X509_V_FLAG_NO_CHECK_TIME
      * @param verify_cb optional X509_STORE_CTX_verify_cb function
      * @return 1 if OK, 0 if NOT OK, -1 on error
      */
     [[nodiscard]] static int verify_cert_signed_by_chain(const std::string& cert_pem,
                                                          const std::string& issuer_pem,
-            const X509_VERIFY_PARAM* x509_verify_param,
-            int (*verify_cb)(int, X509_STORE_CTX *));
-
+                                                         const X509_VERIFY_PARAM* x509_verify_param,
+                                                         int (*verify_cb)(int, X509_STORE_CTX *));
 
     /**
      * Uses OpenSSL X509_verify to verify a certificates signature
@@ -132,13 +114,16 @@ public:
      * @param issuer_pem single PEM encoded issuer certificate
      * @return 1 if OK, 0 if NOT OK, -1 on error
      */
-    [[nodiscard]] static int verify_cert_signed_by_issuer(const std::string& cert_pem, const std::string& issuer_pem) ;
+    [[nodiscard]] static int verify_cert_signed_by_issuer(const std::string& cert_pem,
+                                                          const std::string& issuer_pem) ;
+
 
     /**
      * Returns a unique_ptr<X509>, requiring no manual X509_free
      * @param cert_pem PEM encoded certificate
      */
     [[nodiscard]] static X509_uptr cert_to_x509(const std::string& cert_pem) ;
+
 
     /**
      * @param x509 OpenSSL X509 struct filled with certificate.
@@ -165,6 +150,11 @@ public:
      */
     [[nodiscard]] static std::vector<X509_uptr> certs_to_x509(const std::string& certs_pem);
 
+    /**
+     * Returns a unique_ptr<STACK_OF(X509)>, requiring no manual X509_free
+     * @param cert_pem PEM encoded certificates
+     */
+    [[nodiscard]] static STACK_OF_X509_uptr certs_to_stack_of_x509(const std::string& certs_pem) ;
 
 private:
 
@@ -174,7 +164,8 @@ private:
      * @param X509_X_NAME_FUNC Lambda that calls for example X509_get_subject_name.
      * @return
      */
-    static std::string x509_name_base(const X509 *const x509,
-                                      const std::function<void(const X509 *, const BIO_MEM_uptr &)> &X509_X_NAME_FUNC);
+    static std::string x509_name_base(const X509 *x509,
+                                      const std::function<void(const X509 *,
+                                              const BIO_MEM_uptr &)> &X509_X_NAME_FUNC);
 };
 
