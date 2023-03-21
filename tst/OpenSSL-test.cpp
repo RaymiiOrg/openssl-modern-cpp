@@ -110,7 +110,7 @@ TEST_F(OpenSSLWrappersTestSuite, pointerEmptyOnNotExistingFile) {
 }
 
 
-TEST_F(OpenSSLWrappersTestSuite, stackOfX509CorrectCount) {
+TEST_F(OpenSSLWrappersTestSuite, stackOfX509CorrectCountAndData) {
     //arrange
     auto cert_pem = readFile(dataPath / "Chain-Sectigo_UserTRUST_RSA.pem");
     int expectedSize = 2;
@@ -129,6 +129,19 @@ TEST_F(OpenSSLWrappersTestSuite, stackOfX509CorrectCount) {
     //assert
     EXPECT_EQ(actualSize, expectedSize);
     EXPECT_EQ(testing::internal::GetCapturedStderr(), "i: 0; subject: C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA\ni: 0; issuer : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority\ni: 1; subject: C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority\ni: 1; issuer : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority\n");
+}
+
+TEST_F(OpenSSLWrappersTestSuite, ErrorIfEmpty) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "notexist.pem");
+    int expectedSize = -1;
+
+    //act
+    auto stack_of_x509_certs = OpenSSL::certs_to_stack_of_x509(cert_pem);
+    int actualSize = sk_X509_num(stack_of_x509_certs.get());
+
+    //assert
+    EXPECT_EQ(actualSize, expectedSize);
 }
 
 TEST_F(OpenSSLWrappersTestSuite, pointerEmptyOnGarbageFile) {
