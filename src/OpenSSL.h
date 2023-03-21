@@ -4,6 +4,7 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include <openssl/x509_vfy.h>
 
 #include <memory>
@@ -21,6 +22,9 @@ struct OpenSSLFree
     void operator() (X509* x509) const
     { X509_free(x509); }
 
+    void operator() (STACK_OF(X509)* st) const
+    { sk_X509_free(st); }
+
     void operator() (X509_STORE* store) const
     { X509_STORE_free(store); }
 
@@ -29,9 +33,6 @@ struct OpenSSLFree
 
     void operator() (X509_VERIFY_PARAM* param) const
     { X509_VERIFY_PARAM_free(param); }
-
-    void operator() (STACK_OF(X509)* st) const
-    { sk_X509_free(st); }
 
     void operator() (GENERAL_NAME* gn) const
     {GENERAL_NAME_free(gn); }
@@ -44,6 +45,7 @@ struct OpenSSLFree
 };
 
 using X509_uptr = std::unique_ptr<X509, OpenSSLFree>;
+using STACK_OF_X509_uptr = std::unique_ptr<STACK_OF(X509), OpenSSLFree>;
 using BIO_MEM_uptr = std::unique_ptr<BIO, OpenSSLFree>;
 using EVP_PKEY_uptr = std::unique_ptr<EVP_PKEY, OpenSSLFree>;
 using BUF_MEM_uptr = std::unique_ptr<BUF_MEM,OpenSSLFree>;
@@ -51,7 +53,7 @@ using X509_STORE_CTX_uptr = std::unique_ptr<X509_STORE_CTX, OpenSSLFree>;
 using X509_STORE_uptr = std::unique_ptr<X509_STORE, OpenSSLFree>;
 using X509_VERIFY_PARAM_uptr = std::unique_ptr<X509_VERIFY_PARAM, OpenSSLFree>;
 using GENERAL_NAME_uptr = std::unique_ptr<GENERAL_NAME, OpenSSLFree>;
-using STACK_OF_GENERAL_NAMES_uptr = std::unique_ptr<STACK_OF(GENERAL_NAME), OpenSSLFree>;
+using STACK_OF_GENERAL_NAME_uptr = std::unique_ptr<STACK_OF(GENERAL_NAME), OpenSSLFree>;
 
 
 inline static const int maxKeySize = 4096;

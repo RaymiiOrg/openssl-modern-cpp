@@ -192,23 +192,16 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
 std::vector<std::string> OpenSSL::x509_subject_alternative_dns_names(const X509 *x509) {
 
     std::vector<std::string> result;
-    std::vector<unsigned char> utf8(maxKeySize, 0);
-    STACK_OF_GENERAL_NAMES_uptr names((GENERAL_NAMES*)X509_get_ext_d2i(x509, NID_subject_alt_name, nullptr, nullptr));
+    STACK_OF_GENERAL_NAME_uptr names((STACK_OF(GENERAL_NAME)*)X509_get_ext_d2i(x509, NID_subject_alt_name, nullptr, nullptr));
     int count = sk_GENERAL_NAME_num(names.get());
-
     for (int i = 0; i < count; ++i)
     {
         GENERAL_NAME_uptr entry(sk_GENERAL_NAME_value(names.get(), i));
         if (!entry) continue;
 
-        unsigned char* utf8_p = &utf8[0];
-        unsigned char** utf8_dp = &utf8_p;
-
-        ASN1_STRING_to_UTF8(utf8_dp, entry->d.dNSName);
-        if (utf8_dp && !utf8.empty()) {
-            std::string utf8_str(reinterpret_cast< char const* >(utf8_p));
-            result.push_back(utf8_str);
-        }
+        result.emplace_back(reinterpret_cast<char const*>(ASN1_STRING_get0_data(entry->d.dNSName)),
+                    ASN1_STRING_length(entry->d.dNSName));
     }
-    return {result};
+
+    return result;
 }
