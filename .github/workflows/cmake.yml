@@ -33,12 +33,6 @@ jobs:
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}xd
 
-    - name: ls
-      run: ls -laRSh
-
-    - name: ls build
-      run: ls -laRSh ${{github.workspace}}/build
-
     - name: Run tests
       working-directory: ${{github.workspace}}/build/tst
       run: ctest -C ${{env.BUILD_TYPE}}

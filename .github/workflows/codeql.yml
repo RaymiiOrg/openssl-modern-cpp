@@ -15,11 +15,6 @@ on:
   push
     
 
-
-
-
-
-
 jobs:
   analyze:
     name: Analyze
