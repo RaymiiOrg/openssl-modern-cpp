@@ -1,4 +1,4 @@
-# Modern C++ OpenSSL example
+# Modern C++ OpenSSL examples
 
 This repository shows how to use
 the OpenSSL C API with modern C++.
