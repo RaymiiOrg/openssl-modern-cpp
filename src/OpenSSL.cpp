@@ -7,10 +7,8 @@ OpenSSL::OpenSSL()
     OpenSSL_add_all_algorithms();
     OpenSSL_add_all_ciphers();
     OpenSSL_add_all_digests();
+    ERR_load_crypto_strings();
 }
-
-
-
 
 int OpenSSL::verify_cert_signed_by_issuer(const std::string& cert_pem, const std::string& issuer_pem)
 {
@@ -140,6 +138,28 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
 }
 
 
+
+STACK_OF_X509_uptr OpenSSL::certs_to_stack_of_x509(const std::string &certs_pem)
+{
+    if(certs_pem.empty())
+        return {};
+
+    STACK_OF_X509_uptr result(sk_X509_new(nullptr));
+
+    BIO_MEM_uptr bio(BIO_new(BIO_s_mem()));
+    BIO_puts(bio.get(), certs_pem.c_str());
+
+    while (X509_uptr cert {PEM_read_bio_X509(bio.get(), nullptr,
+                                             nullptr, nullptr)})
+    {
+        sk_X509_push(result.get(), X509_dup(cert.get()));
+    }
+
+    return result;
+}
+
+
+
 int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
                                          const std::string &chain_pem,
                                          const X509_VERIFY_PARAM* x509_verify_param,
@@ -157,51 +177,40 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
         X509_STORE_set1_param(store.get(), x509_verify_param);
     }
 
-    //https://github.com/openssl/openssl/issues/7871
-    //https://github.com/curl/curl/pull/4655
-    X509_VERIFY_PARAM_uptr param(X509_VERIFY_PARAM_new());
-    X509_VERIFY_PARAM_set_flags(param.get(), X509_V_FLAG_PARTIAL_CHAIN);
-    X509_STORE_set1_param(store.get(), param.get());
-
     if(verify_cb != nullptr) {
         X509_STORE_set_verify_cb(store.get(), verify_cb);
     }
 
-    auto chain_x509_certs = certs_to_x509(chain_pem);
-    for(const auto& chain_x509 : chain_x509_certs) {
-        X509_STORE_add_cert(store.get(), chain_x509.get());
+    auto stack_of_x509_certs = certs_to_stack_of_x509(chain_pem);
+
+    X509_uptr cert_x509 = cert_to_x509(cert_pem);
+
+    // store == nullptr otherwise chain would have to be anchors to trusted
+    // root in store. with_self_signed = 1 because this method validates up
+    // to a user provided trusted root.
+    STACK_OF_X509_uptr chain((STACK_OF(X509)*)X509_build_chain(cert_x509.get(), stack_of_x509_certs.get(),
+    nullptr, 1, nullptr, nullptr));
+
+    int chainSize = sk_X509_num(chain.get());
+    for (int i = 0; i < chainSize; i++) {
+        X509* chainCert = sk_X509_value(chain.get(), i);
+        // add the last chain as trusted root anchor
+        if(i == (chainSize - 1))
+            X509_STORE_add_cert(store.get(), chainCert);
     }
 
     X509_STORE_CTX_uptr store_ctx(X509_STORE_CTX_new());
     if(store_ctx == nullptr)
         return -1;
 
-    X509_uptr cert_x509 = cert_to_x509(cert_pem);
-    if(X509_STORE_CTX_init(store_ctx.get(), store.get(), cert_x509.get(), nullptr) != 1)
+    if(X509_STORE_CTX_init(store_ctx.get(), store.get(), cert_x509.get(), chain.get()) != 1)
         return -1;
 
     int result = X509_verify_cert(store_ctx.get());
     if(result != 1) {
         int error = X509_STORE_CTX_get_error(store_ctx.get());
         auto errorMessage = std::string(X509_verify_cert_error_string(error));
-        std::cerr << std::endl << errorMessage << std::endl;
+        std::cerr << errorMessage << "; ";
     }
-    return result;
-}
-
-std::vector<std::string> OpenSSL::x509_subject_alternative_dns_names(const X509 *x509) {
-
-    std::vector<std::string> result;
-    STACK_OF_GENERAL_NAME_uptr names((STACK_OF(GENERAL_NAME)*)X509_get_ext_d2i(x509, NID_subject_alt_name, nullptr, nullptr));
-    int count = sk_GENERAL_NAME_num(names.get());
-    for (int i = 0; i < count; ++i)
-    {
-        GENERAL_NAME_uptr entry(sk_GENERAL_NAME_value(names.get(), i));
-        if (!entry) continue;
-
-        result.emplace_back(reinterpret_cast<char const*>(ASN1_STRING_get0_data(entry->d.dNSName)),
-                    ASN1_STRING_length(entry->d.dNSName));
-    }
-
     return result;
 }

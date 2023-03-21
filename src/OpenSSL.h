@@ -22,8 +22,16 @@ struct OpenSSLFree
     void operator() (X509* x509) const
     { X509_free(x509); }
 
+    /**
+     * This frees the STACK_OF and
+     * all the items in it.
+     */
     void operator() (STACK_OF(X509)* st) const
-    { sk_X509_free(st); }
+    {
+        for(int i = 0; i < sk_X509_num(st); ++i)
+            X509_free(sk_X509_value(st, i));
+        sk_X509_free(st);
+    }
 
     void operator() (X509_STORE* store) const
     { X509_STORE_free(store); }
@@ -37,8 +45,16 @@ struct OpenSSLFree
     void operator() (GENERAL_NAME* gn) const
     {GENERAL_NAME_free(gn); }
 
+    /**
+     * This frees the STACK_OF and
+     * all the items in it.
+     */
     void operator() (STACK_OF(GENERAL_NAME)* st) const
-    { sk_GENERAL_NAME_free(st); }
+    {
+        for(int i = 0; i < sk_GENERAL_NAME_num(st); ++i)
+            GENERAL_NAME_free(sk_GENERAL_NAME_value(st, i));
+        sk_GENERAL_NAME_free(st);
+    }
 
     void operator() (EVP_PKEY* evp_pkey) const
     { EVP_PKEY_free(evp_pkey); }
