@@ -55,6 +55,8 @@ The code shows how to validate
 if a certificate (PEM encoded)
 is signed by another certificate.
 
+The code also shows how to validate a certificate against a chain, building a trust store up to a trusted root.
+
 The repo includes a fake root certificate
 with the same subject, to show that 
 the code does not validate by comparing
@@ -75,10 +77,13 @@ certificate. It includes an intermediate
 method to convert a PEM file to an 
 `X509` object.
 
+
+Furthermore the code shows how to perse the subjectAlternativeName.
+
 The unit test further show how to use the code.
 
 
-### Expired certificate validation
+## Expired certificate validation
 
 To validate an expired certificate, you can either
 pass the `X509_V_FLAG_NO_CHECK_TIME` as 
