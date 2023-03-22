@@ -15,12 +15,12 @@ It also shows how to link against OpenSSL
 using CMake and `CMakeLists.txt`.
 
 The OpenSSL C API is horrible for (spoiled) modern 
-C++ developers. Manual free's all over the place,
+C++ developers. Manual frees all over the place,
 every `_sk_TYPE` has its own `_new` and `_free`,
 internal pointers here and there, and most important,
 the documentation sucks. It's extensive, but not useful.
 For example, every C method call is described, but not the
-overall picture. Every individual method is descrived, the command
+overall picture. Every individual method is described, the command
 line tools are as well, but not something like,
 "Here's how to do X with the C API", where X
 could be anything from validating a certificate
@@ -43,9 +43,9 @@ this repo is memory-safe.
 ## Example unit tests
 
 The `tst` folder has a boatload of unit tests checking
-valid, invalid and other scenario's, like expired 
-certifcates or custom `(*verify_cb)(int, X509_STORE_CTX *)`
-lambda's that are passed as function pointers 
+valid, invalid and other scenarios, like expired 
+certificates or custom `(*verify_cb)(int, X509_STORE_CTX *)`
+lambdas that are passed as function pointers 
 (because they don't capture anything). 
 
 
@@ -78,9 +78,9 @@ method to convert a PEM file to an
 `X509` object.
 
 
-Furthermore the code shows how to perse the subjectAlternativeName.
+Furthermore the code shows how to parse the subjectAlternativeName.
 
-The unit test further show how to use the code.
+The unit tests further show how to use the code.
 
 
 ## Expired certificate validation
