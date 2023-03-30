@@ -167,6 +167,8 @@ public:
      */
     static std::string x509_to_public_key_pem(const X509* x509);
 
+
+    
 private:
 
     /**

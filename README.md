@@ -48,6 +48,7 @@ certificates or custom `(*verify_cb)(int, X509_STORE_CTX *)`
 lambdas that are passed as function pointers 
 (because they don't capture anything). 
 
+[Take a look at the unit tests!](https://github.com/RaymiiOrg/openssl-modern-cpp/blob/master/tst/OpenSSL-test.cpp)
 
 ## Included examples
 
