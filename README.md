@@ -114,20 +114,15 @@ Compile:
 
 Example output:
 
-    /home/remy/CLionProjects/cert-test/cmake-build-debug/cert_test
-    certificate subject: CN=raymii.org
-    certificate issuer : C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA
-    issuer subject     : C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA
-    issuer issuer      : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority
-    root   subject     : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority
-    root   issuer      : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority
-    fake root subject  : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority
-    fake root issuer   : C=US,ST=New Jersey,L=Jersey City,O=The USERTRUST Network,CN=USERTrust RSA Certification Authority
-    Certificate signed by issuer (should be valid): Signature valid
-    Issuer signed by root (should be valid): Signature valid
-    Certificate signed by root (should be INVALID): Signature INVALID
-    Issuer signed by FAKE root (should be INVALID): Signature INVALID
 
+    /home/remy/CLionProjects/cert-test/cmake-build-debug/cert_test
+    
+    certificate subject: CN=raymii.org
+    certificate sans   : raymii.org www.raymii.org
+    certificate issuer : C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA
+    Issuer signed by chain (should be valid): Signature valid
+    
+    ** Take a look at the unit tests for more usage examples! **
 
 
 ## License
