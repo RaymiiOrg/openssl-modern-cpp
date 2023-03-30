@@ -52,6 +52,11 @@ struct OpenSSLOneIntermediateTestSuite : public OpenSSLTestSuite
  * certificate against a single issuer */
 };
 
+struct OpenSSLDGSTSuite : public OpenSSLTestSuite
+{
+/* Tests related to methods that sign / verify */
+};
+
 
 struct OpenSSLDataGatheringTestSuite : public OpenSSLTestSuite
 {
@@ -630,4 +635,54 @@ TEST_F(OpenSSLTestSuite, certNotSignedByFakeChain) {
 
     //assert
     EXPECT_EQ(result, -1);
+}
+
+
+
+TEST_F(OpenSSLDGSTSuite, getPubKeyFromCert) {
+    //arrange
+    // openssl x509 -in raymii.org.2023.pem -pubkey -noout
+    auto expected_pubkey_pem =
+            "-----BEGIN PUBLIC KEY-----\n"
+            "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvz5LrA5t1Bv4qzJX++bQ\n"
+            "myR0eYPpBe/rgzEh5EhGDPoT6Jd1gtA59VaIPHrkag0eOY3xclko3TPSo5CftGMg\n"
+            "aQWa8/ho8fChS5sjClucanMSz74+J0O9GE0Gw0WmchXwnUDaPr0U18VA5Mj5mw+x\n"
+            "3cJ9YHZpZZkh3q7XP1X52MRF735eFVXAaRcuxrXUYf9+CcEZ9ahdU/rtP192uFsR\n"
+            "phYYDWFk5Z5BscyykCLgiaQlwqs5pDQNEBt2I4WKzmUy8bXRRHQC4IKu8X1rbDQb\n"
+            "8O7V64Vd0qimLDMKi+CA+jtvinC7mhkVOC8FG6oZgsR0xrIR4FY78yADXDHl53Qj\n"
+            "iUmLeWO0hfNTANf+GGuNo1qcVXpbJVRFvJ1HpTScp8c92+GVmSgqz4EICHH92yFw\n"
+            "m+lOyHdbj77RtqPDThSPFvhgKQhwSbzhvai3Jnsg0Jf0ZsUm/KJGrMQNFWD4cGSw\n"
+            "xPn/MWsLGGFGQgLSuw6RoylKHTWUETlPFKd/ALXETstWZ/CEOjD6+Qj1Bvy9Gphr\n"
+            "FryZrCMK7fvdsBjnDP5OMcdeNgewGF89aqW55bjTkOfMISBb1rRdYKfW8N0aA7hS\n"
+            "3hW3gYwMRFo4xyZL4+oRg9/oM0JcKGwuKaZqjaFDucNipD2GFDsdkm7ZYj8CIxJ7\n"
+            "yvTL4A1x2xHNrg7fmnt1GHUCAwEAAQ==\n"
+            "-----END PUBLIC KEY-----\n";
+
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto cert = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    auto result = OpenSSL::x509_to_evp_pkey(cert.get());
+    auto resultString = OpenSSL::x509_to_public_key_pem(cert.get());
+
+
+    //assert
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(resultString, expected_pubkey_pem);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, gibberishResultsInEmptyPubkey) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "gibberish.pem");
+    auto cert = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    auto result = OpenSSL::x509_to_evp_pkey(cert.get());
+    auto resultString = OpenSSL::x509_to_public_key_pem(cert.get());
+
+
+    //assert
+    ASSERT_EQ(result, nullptr);
+    EXPECT_EQ(resultString, "");
 }

@@ -156,6 +156,20 @@ public:
      */
     [[nodiscard]] static STACK_OF_X509_uptr certs_to_stack_of_x509(const std::string& certs_pem) ;
 
+
+    /**
+     * Parses X509* and returns public key (if found), otherwise nullptr
+     * @param x509 OpenSSL X509 struct filled with certificate.
+     */
+    [[nodiscard]] static EVP_PKEY_uptr x509_to_evp_pkey(const X509* x509);
+
+
+    /**
+     * Returns the public key in PEM format if found, otherwise empty
+     * @param x509 OpenSSL X509 struct filled with certificate.
+     */
+    static std::string x509_to_public_key_pem(const X509* x509);
+
 private:
 
     /**

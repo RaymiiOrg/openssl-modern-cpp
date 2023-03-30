@@ -230,3 +230,28 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
     }
     return result;
 }
+
+EVP_PKEY_uptr OpenSSL::x509_to_evp_pkey(const X509 *x509) {
+    if(!x509)
+        return {};
+
+    X509_uptr non_const_x509(X509_dup(x509));
+    return EVP_PKEY_uptr(X509_get_pubkey(non_const_x509.get()));
+}
+
+std::string OpenSSL::x509_to_public_key_pem(const X509 *x509) {
+    std::string result;
+    std::vector<unsigned char> pem_buffer(maxKeySize, 0);
+    if(!x509)
+        return result;
+
+    EVP_PKEY_uptr evp_pkey_uptr = x509_to_evp_pkey(x509);
+
+    BIO_MEM_uptr bio(BIO_new(BIO_s_mem()));
+    PEM_write_bio_PUBKEY_ex(bio.get(), evp_pkey_uptr.get(), nullptr, nullptr);
+
+    BIO_read(bio.get(), pem_buffer.data(), maxKeySize);
+    result.assign(pem_buffer.begin(), pem_buffer.end());
+    result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
+    return result;
+}
