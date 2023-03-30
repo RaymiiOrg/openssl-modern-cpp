@@ -354,6 +354,14 @@ TEST_F(OpenSSLWrappersTestSuite, invalidRootInChainSkipsInvalidCertificate) {
 }
 
 
+TEST_F(OpenSSLWrappersTestSuite, emptyPEMResultsInEmptyString) {
+    //arrange
+    auto chain = OpenSSL::certs_to_x509("");
+
+    //act & assert
+    ASSERT_TRUE(chain.empty());
+}
+
 TEST_F(OpenSSLChainTestSuite, certNotSignedByWrongChain) {
     //arrange
     auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");

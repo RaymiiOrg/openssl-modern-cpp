@@ -2,13 +2,6 @@
 #include <functional>
 #include "OpenSSL.h"
 
-OpenSSL::OpenSSL()
-{
-    OpenSSL_add_all_algorithms();
-    OpenSSL_add_all_ciphers();
-    OpenSSL_add_all_digests();
-    ERR_load_crypto_strings();
-}
 
 int OpenSSL::verify_cert_signed_by_issuer(const std::string& cert_pem, const std::string& issuer_pem)
 {

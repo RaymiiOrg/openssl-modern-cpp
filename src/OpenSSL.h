@@ -76,9 +76,6 @@ inline static const int maxKeySize = 4096;
 
 class OpenSSL {
 public:
-    OpenSSL();
-
-
     /**
      * Convenience wrappers
      */
