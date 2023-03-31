@@ -3,6 +3,7 @@
 
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/bio.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/x509_vfy.h>
@@ -58,6 +59,9 @@ struct OpenSSLFree
 
     void operator() (EVP_PKEY* evp_pkey) const
     { EVP_PKEY_free(evp_pkey); }
+
+    void operator() (EVP_MD_CTX* evp_md_ctx) const
+    { EVP_MD_CTX_free(evp_md_ctx); }
 };
 
 using X509_uptr = std::unique_ptr<X509, OpenSSLFree>;
@@ -70,7 +74,7 @@ using X509_STORE_uptr = std::unique_ptr<X509_STORE, OpenSSLFree>;
 using X509_VERIFY_PARAM_uptr = std::unique_ptr<X509_VERIFY_PARAM, OpenSSLFree>;
 using GENERAL_NAME_uptr = std::unique_ptr<GENERAL_NAME, OpenSSLFree>;
 using STACK_OF_GENERAL_NAME_uptr = std::unique_ptr<STACK_OF(GENERAL_NAME), OpenSSLFree>;
-
+using EVP_MD_CTX_uptr = std::unique_ptr<EVP_MD_CTX, OpenSSLFree>;
 
 inline static const int maxKeySize = 4096;
 
@@ -168,7 +172,7 @@ public:
     static std::string x509_to_public_key_pem(const X509* x509);
 
 
-    
+    static int verify_sha256_digest_signature(const std::string& message, const std::string& base64_encoded_signature, const X509* x509_that_has_pubkey_that_signed_the_message);
 
     /**
      * Uses OpenSSL to decode a base64 encoded string.
@@ -191,5 +195,9 @@ private:
     static std::string x509_name_base(const X509 *x509,
                                       const std::function<void(const X509 *,
                                               const BIO_MEM_uptr &)> &X509_X_NAME_FUNC);
+
+
 };
+
+
 

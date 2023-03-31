@@ -2,7 +2,6 @@
 #include <functional>
 #include "OpenSSL.h"
 
-
 int OpenSSL::verify_cert_signed_by_issuer(const std::string& cert_pem, const std::string& issuer_pem)
 {
     if(cert_pem.empty() || issuer_pem.empty())
@@ -247,6 +246,21 @@ std::string OpenSSL::x509_to_public_key_pem(const X509 *x509) {
     result.assign(pem_buffer.begin(), pem_buffer.end());
     result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
     return result;
+}
+
+int OpenSSL::verify_sha256_digest_signature(const std::string &message, const std::string &base64_encoded_signature,
+                                            const X509 *x509_that_has_pubkey_that_signed_the_message) {
+    if(message.empty() ||
+        base64_encoded_signature.empty() ||
+        x509_that_has_pubkey_that_signed_the_message == nullptr)
+        return -1;
+
+    EVP_PKEY_uptr evp_pkey_uptr = x509_to_evp_pkey(x509_that_has_pubkey_that_signed_the_message);
+    if(evp_pkey_uptr == nullptr)
+        return -1;
+
+
+    return 0;
 }
 
 std::string OpenSSL::base64_decode(const std::string &encoded) {
