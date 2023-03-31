@@ -169,6 +169,17 @@ public:
 
 
     
+
+    /**
+     * Uses OpenSSL to decode a base64 encoded string.
+     */
+    static std::string base64_decode(const std::string& encoded);
+
+    /**
+   * Uses OpenSSL to encode a string to base64
+   */
+    static std::string base64_encode(const std::string& message);
+
 private:
 
     /**

@@ -248,3 +248,49 @@ std::string OpenSSL::x509_to_public_key_pem(const X509 *x509) {
     result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
     return result;
 }
+
+std::string OpenSSL::base64_decode(const std::string &encoded) {
+
+    if(encoded.size() > std::numeric_limits<int>::max())
+        return "";
+
+    if(encoded.empty())
+        return "";
+
+
+    int length = static_cast<int>(encoded.size());
+    std::vector<char> message_buffer(length, 0);
+
+
+    int length_decoded = EVP_DecodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
+                                 reinterpret_cast<const unsigned char*>(encoded.c_str()),
+                                 length);
+
+    std::string result;
+    if(length_decoded > 0)
+        result.assign(message_buffer.data(), static_cast<size_t>(length_decoded));
+
+    result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
+    return result;
+}
+
+std::string OpenSSL::base64_encode(const std::string &message) {
+
+    if(message.size() > std::numeric_limits<int>::max())
+        return "";
+
+    if(message.empty())
+        return "";
+
+    size_t encoded_size = EVP_ENCODE_LENGTH(message.length());
+    std::vector<char> message_buffer(encoded_size, 0);
+
+
+    EVP_EncodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
+                    reinterpret_cast<const unsigned char*>(message.c_str()),
+                    message.length());
+
+    std::string result(message_buffer.data(), encoded_size);
+    result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
+    return result;
+}

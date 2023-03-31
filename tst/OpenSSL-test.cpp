@@ -694,3 +694,40 @@ TEST_F(OpenSSLDGSTSuite, gibberishResultsInEmptyPubkey) {
     ASSERT_EQ(result, nullptr);
     EXPECT_EQ(resultString, "");
 }
+
+
+
+TEST_F(OpenSSLDGSTSuite, base64Decode) {
+    //arrange
+    auto encoded_input = "UmVteSBpcyBkZSBiZXN0ZQ==";
+    auto expected_decoded_output = "Remy is de beste";
+
+    //act
+    auto result = OpenSSL::base64_decode(encoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_decoded_output);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64Encode) {
+    //arrange
+    auto decoded_input = "Remy is de beste!!!";
+    auto expected_encoded_output = "UmVteSBpcyBkZSBiZXN0ZSEhIQ==";
+
+    //act
+    auto result = OpenSSL::base64_encode(decoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_encoded_output);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64DecodeEmpty) {
+    EXPECT_EQ(OpenSSL::base64_decode(""), "");
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64EncodeEmpty) {
+    EXPECT_EQ(OpenSSL::base64_encode(""), "");;
+}
