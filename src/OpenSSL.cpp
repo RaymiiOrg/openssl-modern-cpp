@@ -248,11 +248,16 @@ std::string OpenSSL::x509_to_public_key_pem(const X509 *x509) {
     return result;
 }
 
-int OpenSSL::verify_sha256_digest_signature(const std::string &message, const std::string &base64_encoded_signature,
+int OpenSSL::verify_sha256_digest_signature(const std::string &message,
+                                            const std::string &base64_encoded_signature,
                                             const X509 *x509_that_has_pubkey_that_signed_the_message) {
     if(message.empty() ||
         base64_encoded_signature.empty() ||
         x509_that_has_pubkey_that_signed_the_message == nullptr)
+        return -1;
+
+    std::string decoded_signature = base64_decode(base64_encoded_signature);
+    if(decoded_signature.empty())
         return -1;
 
     EVP_PKEY_uptr evp_pkey_uptr = x509_to_evp_pkey(x509_that_has_pubkey_that_signed_the_message);
@@ -260,7 +265,22 @@ int OpenSSL::verify_sha256_digest_signature(const std::string &message, const st
         return -1;
 
 
-    return 0;
+    EVP_MD_CTX_uptr evp_md_ctx(EVP_MD_CTX_new());
+    if(evp_md_ctx == nullptr) // Could not create hash contex
+        return -1;
+
+    if(!EVP_DigestVerifyInit(evp_md_ctx.get(), nullptr, EVP_sha256(), nullptr, evp_pkey_uptr.get()))
+        return -1; // Could not initialize hash context
+
+
+    if(EVP_DigestVerifyUpdate(evp_md_ctx.get(), message.c_str(), message.length()) != 1)
+        return -1;
+
+    int result = EVP_DigestVerifyFinal(evp_md_ctx.get(),
+                                       reinterpret_cast<const unsigned char *>(decoded_signature.c_str()),
+                                       decoded_signature.length());
+
+    return result;
 }
 
 std::string OpenSSL::base64_decode(const std::string &message) {
