@@ -175,9 +175,9 @@ public:
     static int verify_sha256_digest_signature(const std::string& message, const std::string& base64_encoded_signature, const X509* x509_that_has_pubkey_that_signed_the_message);
 
     /**
-     * Uses OpenSSL to decode a base64 encoded string.
+     * Uses OpenSSL to decode a base64 message string.
      */
-    static std::string base64_decode(const std::string& encoded);
+    static std::string base64_decode(const std::string& message);
 
     /**
    * Uses OpenSSL to encode a string to base64

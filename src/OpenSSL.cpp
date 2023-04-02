@@ -263,28 +263,27 @@ int OpenSSL::verify_sha256_digest_signature(const std::string &message, const st
     return 0;
 }
 
-std::string OpenSSL::base64_decode(const std::string &encoded) {
+std::string OpenSSL::base64_decode(const std::string &message) {
 
-    if(encoded.size() > std::numeric_limits<int>::max())
+    if(message.size() > std::numeric_limits<int>::max())
         return "";
 
-    if(encoded.empty())
+    if(message.empty())
         return "";
 
-
-    int length = static_cast<int>(encoded.size());
-    std::vector<char> message_buffer(length, 0);
+    size_t decoded_size =  (((message.length() + 1) * 3) / 4);
+    std::vector<char> message_buffer(decoded_size);
 
 
     int length_decoded = EVP_DecodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
-                                 reinterpret_cast<const unsigned char*>(encoded.c_str()),
-                                 length);
+                                         reinterpret_cast<const unsigned char*>(message.c_str()),
+                                         message.length());
 
-    std::string result;
-    if(length_decoded > 0)
-        result.assign(message_buffer.data(), static_cast<size_t>(length_decoded));
+    if(length_decoded <= 0)
+        return "";
 
-    result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
+    std::string result(message_buffer.data(), message_buffer.size());
+    result.erase(result.find_last_not_of('\0') + 1, std::string::npos);
     return result;
 }
 
@@ -296,15 +295,17 @@ std::string OpenSSL::base64_encode(const std::string &message) {
     if(message.empty())
         return "";
 
-    size_t encoded_size = EVP_ENCODE_LENGTH(message.length());
-    std::vector<char> message_buffer(encoded_size, 0);
+    size_t encoded_size = (1 + ((message.length() + 2) / 3 * 4));
+    std::vector<char> message_buffer(encoded_size);
 
+    int length_encoded = EVP_EncodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
+                                         reinterpret_cast<const unsigned char*>(message.c_str()),
+                                         message.length());
 
-    EVP_EncodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
-                    reinterpret_cast<const unsigned char*>(message.c_str()),
-                    message.length());
+    if(length_encoded <= 0)
+        return "";
 
-    std::string result(message_buffer.data(), encoded_size);
-    result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
+    std::string result(message_buffer.data(), message_buffer.size());
+    result.erase(result.find_last_not_of('\0') + 1, std::string::npos);
     return result;
 }
