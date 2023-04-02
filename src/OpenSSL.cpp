@@ -309,3 +309,22 @@ std::string OpenSSL::base64_encode(const std::string &message) {
     result.erase(result.find_last_not_of('\0') + 1, std::string::npos);
     return result;
 }
+
+
+std::string OpenSSL::read_binary_file(const std::string &filename) {
+    std::ifstream infile(filename, std::ios::binary);
+    if (!infile) {
+        return "";
+    }
+
+    infile.seekg(0, std::ios::end);
+    std::streamsize size = infile.tellg();
+    infile.seekg(0, std::ios::beg);
+
+    std::string buffer(size, ' ');
+    if (!infile.read(&buffer[0], size)) {
+        return "";
+    }
+
+    return buffer;
+}
