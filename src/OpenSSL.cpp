@@ -309,13 +309,17 @@ std::string OpenSSL::base64_decode(const std::string &message) {
     if(message.empty())
         return "";
 
-    size_t decoded_size =  (((message.length() + 1) * 3) / 4);
+    std::string strippedMessage = stripNonBase64FromString(message);
+
+    if(strippedMessage.empty() || message.size() > std::numeric_limits<int>::max())
+        return "";
+
+    size_t decoded_size =  (((strippedMessage.length() + 1) * 3) / 4);
     std::vector<char> message_buffer(decoded_size);
 
-
     int length_decoded = EVP_DecodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
-                                         reinterpret_cast<const unsigned char*>(message.c_str()),
-                                         message.length());
+                                         reinterpret_cast<const unsigned char*>(strippedMessage.c_str()),
+                                         strippedMessage.length());
 
     if(length_decoded <= 0)
         return "";
@@ -323,6 +327,15 @@ std::string OpenSSL::base64_decode(const std::string &message) {
     std::string result(message_buffer.data(), message_buffer.size());
     result.erase(result.find_last_not_of('\0') + 1, std::string::npos);
     return result;
+}
+
+std::string OpenSSL::stripNonBase64FromString(const std::string &message) {
+    std::string strippedMessage(message);
+    strippedMessage.erase(std::remove_if(strippedMessage.begin(), strippedMessage.end(),
+       [](const char c) {
+            return allowed_base64.find(c) == std::string::npos;
+        }), strippedMessage.cend());
+    return strippedMessage;
 }
 
 std::string OpenSSL::base64_encode(const std::string &message) {

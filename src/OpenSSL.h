@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2023 Remy van Elst
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 #pragma once
 
 
@@ -177,12 +194,12 @@ public:
     /**
      * Uses OpenSSL to decode a base64 message string.
      */
-    static std::string base64_decode(const std::string& message);
+    [[nodiscard]] static std::string base64_decode(const std::string& message);
 
     /**
    * Uses OpenSSL to encode a string to base64
    */
-    static std::string base64_encode(const std::string& message);
+    [[nodiscard]] static std::string base64_encode(const std::string& message);
 
 private:
 
@@ -198,6 +215,16 @@ private:
 
 
     static std::vector<char> read_binary_file(const std::string& filename);
+
+    inline static const std::string allowed_base64{
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
+            'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+            'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
+            'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+            's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2',
+            '3', '4', '5', '6', '7', '8', '9', '+', '/', '='};
+
+    static std::string stripNonBase64FromString(const std::string &message);
 };
 
 

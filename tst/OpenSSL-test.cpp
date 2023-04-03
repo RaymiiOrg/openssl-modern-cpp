@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2023 Remy van Elst
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
 #include "gtest/gtest.h"
 #include <filesystem>
 
@@ -699,7 +717,6 @@ TEST_F(OpenSSLDGSTSuite, gibberishResultsInEmptyPubkey) {
 }
 
 
-
 TEST_F(OpenSSLDGSTSuite, base64Decode) {
     //arrange
     auto encoded_input = "UmVteSBpcyBkZSBiZXN0ZQ==";
@@ -726,14 +743,29 @@ TEST_F(OpenSSLDGSTSuite, base64Encode) {
 }
 
 
+
+TEST_F(OpenSSLDGSTSuite, multiLineBase64Decode) {
+    //arrange
+    auto encoded_input = "UmVteSBpcy\n"
+                                   "BkZSBiZXN0ZQ==";
+    auto expected_decoded_output = "Remy is de beste";
+
+    //act
+    auto result = OpenSSL::base64_decode(encoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_decoded_output);
+}
+
 TEST_F(OpenSSLDGSTSuite, base64BinaryEncode) {
     //arrange
     auto decoded_input = OpenSSL::read_binary_file(dataPath / "raymii.org.2023.der");
+    std::string decoded_string(decoded_input.data(), decoded_input.size());
     // coreutils base64 -w 0 raymii.org.2023.der:
     auto expected_encoded_output = "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";
 
     //act
-    auto result = OpenSSL::base64_encode(decoded_input);
+    auto result = OpenSSL::base64_encode(decoded_string);
 
     //assert
     EXPECT_EQ(result, expected_encoded_output);
