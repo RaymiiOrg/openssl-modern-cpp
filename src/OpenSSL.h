@@ -196,8 +196,8 @@ private:
                                       const std::function<void(const X509 *,
                                               const BIO_MEM_uptr &)> &X509_X_NAME_FUNC);
 
-    static std::string read_binary_file(const std::string& filename);
 
+    static std::vector<char> read_binary_file(const std::string& filename);
 };
 
 

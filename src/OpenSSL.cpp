@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2023 Remy van Elst
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
 #include <vector>
 #include <functional>
 #include "OpenSSL.h"
@@ -331,20 +349,11 @@ std::string OpenSSL::base64_encode(const std::string &message) {
 }
 
 
-std::string OpenSSL::read_binary_file(const std::string &filename) {
+std::vector<char> OpenSSL::read_binary_file(const std::string &filename) {
     std::ifstream infile(filename, std::ios::binary);
-    if (!infile) {
-        return "";
-    }
+    if(!infile)
+        return {};
 
-    infile.seekg(0, std::ios::end);
-    std::streamsize size = infile.tellg();
-    infile.seekg(0, std::ios::beg);
-
-    std::string buffer(size, ' ');
-    if (!infile.read(&buffer[0], size)) {
-        return "";
-    }
-
-    return buffer;
+    std::vector<char> result(std::istreambuf_iterator<char>(infile), {});
+    return result;
 }
