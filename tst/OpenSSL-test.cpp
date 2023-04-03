@@ -1,7 +1,28 @@
-#include "OpenSSL.h"
+/*
+ * Copyright (c) 2023 Remy van Elst
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 
 #include "gtest/gtest.h"
 #include <filesystem>
+
+#define private public
+#include "OpenSSL.h"
+#undef private
+
 namespace fs = std::filesystem;
 
 struct OpenSSLTestSuite : public ::testing::Test
@@ -19,7 +40,6 @@ struct OpenSSLTestSuite : public ::testing::Test
                             std::istreambuf_iterator<char>());
        return out;
    }
-
 };
 
 
@@ -52,13 +72,17 @@ struct OpenSSLOneIntermediateTestSuite : public OpenSSLTestSuite
  * certificate against a single issuer */
 };
 
+struct OpenSSLDGSTSuite : public OpenSSLTestSuite
+{
+/* Tests related to methods that sign / verify */
+};
+
 
 struct OpenSSLDataGatheringTestSuite : public OpenSSLTestSuite
 {
 /* Tests related to certificate data parsing, like subject,
  * issuer, subjectAlternativeNames. */
 };
-
 
 TEST_F(OpenSSLDataGatheringTestSuite, certSubjectMatches) {
     //arrange
@@ -71,7 +95,6 @@ TEST_F(OpenSSLDataGatheringTestSuite, certSubjectMatches) {
     //assert
     EXPECT_EQ(result, "CN=raymii.org");
 }
-
 
 TEST_F(OpenSSLDataGatheringTestSuite, certSubjectEmptyOnNonExistingFile) {
     //arrange
@@ -348,6 +371,14 @@ TEST_F(OpenSSLWrappersTestSuite, invalidRootInChainSkipsInvalidCertificate) {
     EXPECT_EQ(OpenSSL::x509_subject(chain[0].get()), "C=GB,ST=Greater Manchester,L=Salford,O=Sectigo Limited,CN=Sectigo RSA Domain Validation Secure Server CA");
 }
 
+
+TEST_F(OpenSSLWrappersTestSuite, emptyPEMResultsInEmptyString) {
+    //arrange
+    auto chain = OpenSSL::certs_to_x509("");
+
+    //act & assert
+    ASSERT_TRUE(chain.empty());
+}
 
 TEST_F(OpenSSLChainTestSuite, certNotSignedByWrongChain) {
     //arrange
@@ -629,5 +660,236 @@ TEST_F(OpenSSLTestSuite, certNotSignedByFakeChain) {
     int result = OpenSSL::verify_cert_signed_by_chain(cert_pem, chain_pem);
 
     //assert
+    EXPECT_EQ(result, -1);
+}
+
+
+
+TEST_F(OpenSSLDGSTSuite, getPubKeyFromCert) {
+    //arrange
+    // openssl x509 -in raymii.org.2023.pem -pubkey -noout
+    auto expected_pubkey_pem =
+            "-----BEGIN PUBLIC KEY-----\n"
+            "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvz5LrA5t1Bv4qzJX++bQ\n"
+            "myR0eYPpBe/rgzEh5EhGDPoT6Jd1gtA59VaIPHrkag0eOY3xclko3TPSo5CftGMg\n"
+            "aQWa8/ho8fChS5sjClucanMSz74+J0O9GE0Gw0WmchXwnUDaPr0U18VA5Mj5mw+x\n"
+            "3cJ9YHZpZZkh3q7XP1X52MRF735eFVXAaRcuxrXUYf9+CcEZ9ahdU/rtP192uFsR\n"
+            "phYYDWFk5Z5BscyykCLgiaQlwqs5pDQNEBt2I4WKzmUy8bXRRHQC4IKu8X1rbDQb\n"
+            "8O7V64Vd0qimLDMKi+CA+jtvinC7mhkVOC8FG6oZgsR0xrIR4FY78yADXDHl53Qj\n"
+            "iUmLeWO0hfNTANf+GGuNo1qcVXpbJVRFvJ1HpTScp8c92+GVmSgqz4EICHH92yFw\n"
+            "m+lOyHdbj77RtqPDThSPFvhgKQhwSbzhvai3Jnsg0Jf0ZsUm/KJGrMQNFWD4cGSw\n"
+            "xPn/MWsLGGFGQgLSuw6RoylKHTWUETlPFKd/ALXETstWZ/CEOjD6+Qj1Bvy9Gphr\n"
+            "FryZrCMK7fvdsBjnDP5OMcdeNgewGF89aqW55bjTkOfMISBb1rRdYKfW8N0aA7hS\n"
+            "3hW3gYwMRFo4xyZL4+oRg9/oM0JcKGwuKaZqjaFDucNipD2GFDsdkm7ZYj8CIxJ7\n"
+            "yvTL4A1x2xHNrg7fmnt1GHUCAwEAAQ==\n"
+            "-----END PUBLIC KEY-----\n";
+
+    auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
+    auto cert = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    auto result = OpenSSL::x509_to_evp_pubkey(cert.get());
+    auto resultString = OpenSSL::x509_to_public_key_pem(cert.get());
+
+
+    //assert
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(resultString, expected_pubkey_pem);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, gibberishResultsInEmptyPubkey) {
+    //arrange
+    auto cert_pem = readFile(dataPath / "gibberish.pem");
+    auto cert = OpenSSL::cert_to_x509(cert_pem);
+
+    //act
+    auto result = OpenSSL::x509_to_evp_pubkey(cert.get());
+    auto resultString = OpenSSL::x509_to_public_key_pem(cert.get());
+
+
+    //assert
+    ASSERT_EQ(result, nullptr);
+    EXPECT_EQ(resultString, "");
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64Decode) {
+    //arrange
+    auto encoded_input = "UmVteSBpcyBkZSBiZXN0ZQ==";
+    auto expected_decoded_output = "Remy is de beste";
+
+    //act
+    auto result = OpenSSL::base64_decode(encoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_decoded_output);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64Encode) {
+    //arrange
+    std::string decoded_input = "Remy is de beste!!!";
+    std::string expected_encoded_output = "UmVteSBpcyBkZSBiZXN0ZSEhIQ==";
+
+    //act
+    std::string result = OpenSSL::base64_encode(decoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_encoded_output);
+}
+
+
+
+TEST_F(OpenSSLDGSTSuite, multiLineBase64Decode) {
+    //arrange
+    auto encoded_input = "UmVteSBpcy\n"
+                                   "BkZSBiZXN0ZQ==";
+    auto expected_decoded_output = "Remy is de beste";
+
+    //act
+    auto result = OpenSSL::base64_decode(encoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_decoded_output);
+}
+
+TEST_F(OpenSSLDGSTSuite, base64BinaryEncode) {
+    //arrange
+    auto decoded_input = OpenSSL::read_binary_file(dataPath / "raymii.org.2023.der");
+    std::string decoded_string(decoded_input.data(), decoded_input.size());
+    // coreutils base64 -w 0 raymii.org.2023.der:
+    auto expected_encoded_output = "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";
+
+    //act
+    auto result = OpenSSL::base64_encode(decoded_string);
+
+    //assert
+    EXPECT_EQ(result, expected_encoded_output);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64BinaryDecode) {
+    //arrange
+    std::string encoded_input ("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");
+    auto binfile = OpenSSL::read_binary_file(dataPath / "raymii.org.2023.der");
+    std::string expected_decoded_output(binfile.data(), binfile.size());
+
+    //act
+    auto result = OpenSSL::base64_decode(encoded_input);
+
+    //assert
+    EXPECT_EQ(result, expected_decoded_output);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64DecodeEmpty) {
+    EXPECT_EQ(OpenSSL::base64_decode(""), "");
+}
+
+
+TEST_F(OpenSSLDGSTSuite, base64EncodeEmpty) {
+    EXPECT_EQ(OpenSSL::base64_encode(""), "");;
+}
+
+
+
+TEST_F(OpenSSLDGSTSuite, verifyHashCorrect) {
+    // arrange
+    //openssl dgst -sha256 -sign tst_sign.key -out sign.txt.sha256 sign.txt
+    //openssl dgst -sha256 -verify  <(openssl x509 -in tst_sign.crt  -pubkey -noout) -signature sign.txt.sha256 sign.txt
+    //Verified OK
+    //base64 sign.txt.sha256 > sign.txt.sha256.txt
+
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 1);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, verifyTamperedDataFails) {
+    // arrange
+    std::string message = readFile(dataPath / "sign-tampered.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 0);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, verifyOtherCertificateFails) {
+    // arrange
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "raymii.org.2023.pem"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 0);
+}
+
+TEST_F(OpenSSLDGSTSuite, verifyTamperedSignatureFails) {
+    // arrange
+    std::string message = readFile(dataPath / "sign-tampered.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.tampered.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 0);
+}
+
+TEST_F(OpenSSLDGSTSuite, emptyMessageResultsInError) {
+    // arrange
+    std::string message;
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, -1);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, emptySignatureResultsInError) {
+    // arrange
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature;
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, -1);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, emptyCertResultsInError) {
+    // arrange
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = nullptr;
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
     EXPECT_EQ(result, -1);
 }

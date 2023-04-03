@@ -1,14 +1,24 @@
+/*
+ * Copyright (c) 2023 Remy van Elst
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
 #include <vector>
 #include <functional>
 #include "OpenSSL.h"
-
-OpenSSL::OpenSSL()
-{
-    OpenSSL_add_all_algorithms();
-    OpenSSL_add_all_ciphers();
-    OpenSSL_add_all_digests();
-    ERR_load_crypto_strings();
-}
 
 int OpenSSL::verify_cert_signed_by_issuer(const std::string& cert_pem, const std::string& issuer_pem)
 {
@@ -69,7 +79,9 @@ std::string OpenSSL::x509_name_base(const X509 *const x509,
     // The returned value is an internal pointer which MUST NOT be freed.
     X509_X_NAME_FUNC(x509, bio);
 
-    BIO_read(bio.get(), subject_buffer.data(), maxKeySize);
+    if(BIO_read(bio.get(), subject_buffer.data(), maxKeySize) <= 0)
+        return result;
+
     result.assign(subject_buffer.begin(), subject_buffer.end());
     result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
     return result;
@@ -105,7 +117,8 @@ std::vector<X509_uptr> OpenSSL::certs_to_x509(const std::string& certs_pem)
 
     X509_uptr x509(X509_new());
     BIO_MEM_uptr bio(BIO_new(BIO_s_mem()));
-    BIO_puts(bio.get(), certs_pem.c_str());
+    if(BIO_puts(bio.get(), certs_pem.c_str()) <= 0)
+        return {};
 
     while (X509_uptr cert {PEM_read_bio_X509(bio.get(), nullptr,
                              nullptr, nullptr)}) {
@@ -163,7 +176,8 @@ STACK_OF_X509_uptr OpenSSL::certs_to_stack_of_x509(const std::string &certs_pem)
     STACK_OF_X509_uptr result(sk_X509_new(nullptr));
 
     BIO_MEM_uptr bio(BIO_new(BIO_s_mem()));
-    BIO_puts(bio.get(), certs_pem.c_str());
+    if(BIO_puts(bio.get(), certs_pem.c_str()) <= 0)
+        return {};
 
     while (X509_uptr cert {PEM_read_bio_X509(bio.get(), nullptr,
                                              nullptr, nullptr)})
@@ -190,7 +204,8 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
         return -1;
 
     if(x509_verify_param != nullptr) {
-        X509_STORE_set1_param(store.get(), x509_verify_param);
+        if(X509_STORE_set1_param(store.get(), x509_verify_param) <= 0)
+            return -1;
     }
 
     if(verify_cb != nullptr) {
@@ -212,7 +227,8 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
         X509* chainCert = sk_X509_value(chain.get(), i);
         // add the last chain as trusted root anchor
         if(i == (chainSize - 1))
-            X509_STORE_add_cert(store.get(), chainCert);
+            if(X509_STORE_add_cert(store.get(), chainCert) <= 0)
+                return -1;
     }
 
     X509_STORE_CTX_uptr store_ctx(X509_STORE_CTX_new());
@@ -228,5 +244,137 @@ int OpenSSL::verify_cert_signed_by_chain(const std::string &cert_pem,
         auto errorMessage = std::string(X509_verify_cert_error_string(error));
         std::cerr << errorMessage << "; ";
     }
+    return result;
+}
+
+EVP_PKEY_uptr OpenSSL::x509_to_evp_pubkey(const X509 *x509) {
+    if(!x509)
+        return {};
+
+    X509_uptr non_const_x509(X509_dup(x509));
+    return EVP_PKEY_uptr(X509_get_pubkey(non_const_x509.get()));
+}
+
+std::string OpenSSL::x509_to_public_key_pem(const X509 *x509) {
+    std::string result;
+    std::vector<unsigned char> pem_buffer(maxKeySize, 0);
+    if(!x509)
+        return result;
+
+    EVP_PKEY_uptr evp_pubkey_uptr = x509_to_evp_pubkey(x509);
+
+    BIO_MEM_uptr bio(BIO_new(BIO_s_mem()));
+    if(PEM_write_bio_PUBKEY_ex(bio.get(), evp_pubkey_uptr.get(), nullptr, nullptr) <= 0)
+        return result;
+
+    if(BIO_read(bio.get(), pem_buffer.data(), maxKeySize) <= 0)
+        return result;
+
+    result.assign(pem_buffer.begin(), pem_buffer.end());
+    result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
+    return result;
+}
+
+int OpenSSL::verify_sha256_digest_signature(const std::string &message,
+                                            const std::string &base64_encoded_signature,
+                                            const X509 *x509_that_has_pubkey_that_signed_the_message) {
+    if(message.empty() ||
+        base64_encoded_signature.empty() ||
+        x509_that_has_pubkey_that_signed_the_message == nullptr)
+        return -1;
+
+    std::string decoded_signature = base64_decode(base64_encoded_signature);
+    if(decoded_signature.empty())
+        return -1;
+
+    EVP_PKEY_uptr evp_pubkey_uptr = x509_to_evp_pubkey(x509_that_has_pubkey_that_signed_the_message);
+    if(evp_pubkey_uptr == nullptr)
+        return -1;
+
+    EVP_MD_CTX_uptr evp_md_ctx(EVP_MD_CTX_new());
+    if(evp_md_ctx == nullptr) // Could not create hash contex
+        return -1;
+
+    if(!EVP_DigestVerifyInit(evp_md_ctx.get(), nullptr, EVP_sha256(), nullptr, evp_pubkey_uptr.get()))
+        return -1; // Could not initialize hash context
+
+
+    if(EVP_DigestVerifyUpdate(evp_md_ctx.get(), message.c_str(), message.length()) != 1)
+        return -1;
+
+    int result = EVP_DigestVerifyFinal(evp_md_ctx.get(),
+                                       reinterpret_cast<const unsigned char *>(decoded_signature.c_str()),
+                                       decoded_signature.length());
+
+    return result;
+}
+
+std::string OpenSSL::base64_decode(const std::string &message) {
+
+    if(message.size() > std::numeric_limits<int>::max())
+        return "";
+
+    if(message.empty())
+        return "";
+
+    std::string strippedMessage = stripNonBase64FromString(message);
+
+    if(strippedMessage.empty() || message.size() > std::numeric_limits<int>::max())
+        return "";
+
+    size_t decoded_size =  (((strippedMessage.length() + 1) * 3) / 4);
+    std::vector<char> message_buffer(decoded_size);
+
+    int length_decoded = EVP_DecodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
+                                         reinterpret_cast<const unsigned char*>(strippedMessage.c_str()),
+                                         strippedMessage.length());
+
+    if(length_decoded <= 0)
+        return "";
+
+    std::string result(message_buffer.data(), message_buffer.size());
+    result.erase(result.find_last_not_of('\0') + 1, std::string::npos);
+    return result;
+}
+
+std::string OpenSSL::stripNonBase64FromString(const std::string &message) {
+    std::string strippedMessage(message);
+    strippedMessage.erase(std::remove_if(strippedMessage.begin(), strippedMessage.end(),
+       [](const char c) {
+            return allowed_base64.find(c) == std::string::npos;
+        }), strippedMessage.cend());
+    return strippedMessage;
+}
+
+std::string OpenSSL::base64_encode(const std::string &message) {
+
+    if(message.size() > std::numeric_limits<int>::max())
+        return "";
+
+    if(message.empty())
+        return "";
+
+    size_t encoded_size = (1 + ((message.length() + 2) / 3 * 4));
+    std::vector<char> message_buffer(encoded_size);
+
+    int length_encoded = EVP_EncodeBlock(reinterpret_cast<unsigned char*>(message_buffer.data()),
+                                         reinterpret_cast<const unsigned char*>(message.c_str()),
+                                         message.length());
+
+    if(length_encoded <= 0)
+        return "";
+
+    std::string result(message_buffer.data(), message_buffer.size());
+    result.erase(result.find_last_not_of('\0') + 1, std::string::npos);
+    return result;
+}
+
+
+std::vector<char> OpenSSL::read_binary_file(const std::string &filename) {
+    std::ifstream infile(filename, std::ios::binary);
+    if(!infile)
+        return {};
+
+    std::vector<char> result(std::istreambuf_iterator<char>(infile), {});
     return result;
 }
