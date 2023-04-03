@@ -40,7 +40,6 @@ struct OpenSSLTestSuite : public ::testing::Test
                             std::istreambuf_iterator<char>());
        return out;
    }
-
 };
 
 
@@ -85,7 +84,6 @@ struct OpenSSLDataGatheringTestSuite : public OpenSSLTestSuite
  * issuer, subjectAlternativeNames. */
 };
 
-
 TEST_F(OpenSSLDataGatheringTestSuite, certSubjectMatches) {
     //arrange
     auto cert_pem = readFile(dataPath / "raymii.org.2023.pem");
@@ -97,7 +95,6 @@ TEST_F(OpenSSLDataGatheringTestSuite, certSubjectMatches) {
     //assert
     EXPECT_EQ(result, "CN=raymii.org");
 }
-
 
 TEST_F(OpenSSLDataGatheringTestSuite, certSubjectEmptyOnNonExistingFile) {
     //arrange
@@ -691,7 +688,7 @@ TEST_F(OpenSSLDGSTSuite, getPubKeyFromCert) {
     auto cert = OpenSSL::cert_to_x509(cert_pem);
 
     //act
-    auto result = OpenSSL::x509_to_evp_pkey(cert.get());
+    auto result = OpenSSL::x509_to_evp_pubkey(cert.get());
     auto resultString = OpenSSL::x509_to_public_key_pem(cert.get());
 
 
@@ -707,7 +704,7 @@ TEST_F(OpenSSLDGSTSuite, gibberishResultsInEmptyPubkey) {
     auto cert = OpenSSL::cert_to_x509(cert_pem);
 
     //act
-    auto result = OpenSSL::x509_to_evp_pkey(cert.get());
+    auto result = OpenSSL::x509_to_evp_pubkey(cert.get());
     auto resultString = OpenSSL::x509_to_public_key_pem(cert.get());
 
 
@@ -793,4 +790,106 @@ TEST_F(OpenSSLDGSTSuite, base64DecodeEmpty) {
 
 TEST_F(OpenSSLDGSTSuite, base64EncodeEmpty) {
     EXPECT_EQ(OpenSSL::base64_encode(""), "");;
+}
+
+
+
+TEST_F(OpenSSLDGSTSuite, verifyHashCorrect) {
+    // arrange
+    //openssl dgst -sha256 -sign tst_sign.key -out sign.txt.sha256 sign.txt
+    //openssl dgst -sha256 -verify  <(openssl x509 -in tst_sign.crt  -pubkey -noout) -signature sign.txt.sha256 sign.txt
+    //Verified OK
+    //base64 sign.txt.sha256 > sign.txt.sha256.txt
+
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 1);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, verifyTamperedDataFails) {
+    // arrange
+    std::string message = readFile(dataPath / "sign-tampered.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 0);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, verifyOtherCertificateFails) {
+    // arrange
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "raymii.org.2023.pem"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 0);
+}
+
+TEST_F(OpenSSLDGSTSuite, verifyTamperedSignatureFails) {
+    // arrange
+    std::string message = readFile(dataPath / "sign-tampered.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.tampered.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, 0);
+}
+
+TEST_F(OpenSSLDGSTSuite, emptyMessageResultsInError) {
+    // arrange
+    std::string message;
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, -1);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, emptySignatureResultsInError) {
+    // arrange
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature;
+    X509_uptr cert_with_pubkey_that_signed_message = OpenSSL::cert_to_x509(readFile(dataPath / "tst_sign.crt"));
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, -1);
+}
+
+
+TEST_F(OpenSSLDGSTSuite, emptyCertResultsInError) {
+    // arrange
+    std::string message = readFile(dataPath / "sign.txt");
+    std::string base64_encoded_signature = readFile(dataPath / "sign.txt.sha256.txt");
+    X509_uptr cert_with_pubkey_that_signed_message = nullptr;
+
+    // act
+    int result = OpenSSL::verify_sha256_digest_signature(message, base64_encoded_signature, cert_with_pubkey_that_signed_message.get());
+
+    // assert
+    EXPECT_EQ(result, -1);
 }

@@ -179,17 +179,26 @@ public:
      * Parses X509* and returns public key (if found), otherwise nullptr
      * @param x509 OpenSSL X509 struct filled with certificate.
      */
-    [[nodiscard]] static EVP_PKEY_uptr x509_to_evp_pkey(const X509* x509);
+    [[nodiscard]] static EVP_PKEY_uptr x509_to_evp_pubkey(const X509* x509);
 
 
     /**
      * Returns the public key in PEM format if found, otherwise empty
      * @param x509 OpenSSL X509 struct filled with certificate.
      */
-    static std::string x509_to_public_key_pem(const X509* x509);
+    [[nodiscard]] static std::string x509_to_public_key_pem(const X509* x509);
 
 
-    static int verify_sha256_digest_signature(const std::string& message, const std::string& base64_encoded_signature, const X509* x509_that_has_pubkey_that_signed_the_message);
+    /**
+     * Verifies if a sha256 signed digest signed the provided message.
+     * cli verify: openssl dgst -sha256 -verify  <(openssl x509 -in sign.crt  -pubkey -noout) -signature signature.bin message.txt
+     * cli sign  : openssl dgst -sha256 -sign sign.key -out signature.bin message.txt
+     * @param message original message that was signed
+     * @param base64_encoded_signature binary signature data encoded as base64
+     * @param x509_that_has_pubkey_that_signed_the_message certificate with publickey that signed the messag
+     * @return 1 on verify correct, 0 on verify incorrect, -1 on error,
+     */
+    [[nodiscard]] static int verify_sha256_digest_signature(const std::string& message, const std::string& base64_encoded_signature, const X509* x509_that_has_pubkey_that_signed_the_message);
 
     /**
      * Uses OpenSSL to decode a base64 message string.
